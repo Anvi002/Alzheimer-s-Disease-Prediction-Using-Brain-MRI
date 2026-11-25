@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alzheimer's MRI Classification</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f3f6fb;
+            color: #263449;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        header h1 {
+            color: #183b63;
+            font-size: 30px;
+            margin-bottom: 12px;
+        }
+
+        header p {
+            color: #68778a;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.06);
+        }
+
+        .upload-area {
+            border: 2px dashed #9bb5d2;
+            border-radius: 12px;
+            padding: 35px 20px;
+            text-align: center;
+            background: #f8fbff;
+        }
+
+        .upload-area h3 {
+            margin-bottom: 10px;
+            color: #244d78;
+        }
+
+        input[type="file"] {
+            margin-top: 18px;
+            max-width: 100%;
+        }
+
+        #preview {
+            display: none;
+            max-width: 100%;
+            max-height: 280px;
+            margin: 25px auto 0;
+            border-radius: 10px;
+            object-fit: contain;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 22px;
+            border: none;
+            border-radius: 9px;
+            background: #245b91;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #194570;
+        }
+
+        button:disabled {
+            background: #9aabbc;
+            cursor: not-allowed;
+        }
+
+        #status {
+            text-align: center;
+            margin-top: 18px;
+            color: #64748b;
+        }
+
+        #result {
+            display: none;
+            margin-top: 25px;
+            padding: 22px;
+            border-radius: 12px;
+            background: #edf5fc;
+            text-align: center;
+        }
+
+        #prediction {
+            font-size: 25px;
+            font-weight: bold;
+            color: #245b91;
+            margin: 12px 0;
+        }
+
+        #confidence {
+            color: #52677d;
+        }
+
+        .disclaimer {
+            margin-top: 25px;
+            padding: 15px;
+            background: #fff8e8;
+            border-radius: 9px;
+            color: #795b20;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 25px;
+            color: #8491a1;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Alzheimer's MRI Classification</h1>
+    <p>Deep Learning Based Brain MRI Classification System</p>
+</header>
+
+<main class="container">
+
+    <div class="upload-area">
+        <h3>Upload Brain MRI Image</h3>
+        <p>Select an MRI image to generate a classification result.</p>
+
+        <input
+            type="file"
+            id="imageInput"
+            accept="image/*"
+        >
+
+        <img id="preview" alt="MRI preview">
+    </div>
+
+    <button id="predictButton" disabled>
+        Predict
+    </button>
+
+    <p id="status">Please select an image to continue.</p>
+
+    <div id="result">
+        <h3>Classification Result</h3>
+        <p id="prediction"></p>
+        <p id="confidence"></p>
+    </div>
+
+    <div class="disclaimer">
+        <strong>Research Disclaimer:</strong>
+        This application is an academic research prototype.
+        Its predictions are experimental and must not be used
+        for medical diagnosis or treatment decisions.
+    </div>
+
+</main>
+
+<footer>
+    Powered by PyTorch, DenseNet121 and FastAPI
+</footer>
+
+<script>
+    const imageInput = document.getElementById("imageInput");
+    const preview = document.getElementById("preview");
+    const predictButton = document.getElementById("predictButton");
+    const statusText = document.getElementById("status");
+    const resultBox = document.getElementById("result");
+
+    let selectedFile = null;
+
+    imageInput.addEventListener("change", function () {
+        selectedFile = this.files[0];
+
+        resultBox.style.display = "none";
+
+        if (!selectedFile) {
+            preview.style.display = "none";
+            predictButton.disabled = true;
+            statusText.textContent = "Please select an image.";
+            return;
+        }
+
+        if (!selectedFile.type.startsWith("image/")) {
+            selectedFile = null;
+            preview.style.display = "none";
+            predictButton.disabled = true;
+            statusText.textContent = "Please select a valid image file.";
+            return;
+        }
+
+        preview.src = URL.createObjectURL(selectedFile);
+        preview.style.display = "block";
+
+        predictButton.disabled = false;
+        statusText.textContent = "Image selected. Ready to predict.";
+    });
+
+    predictButton.addEventListener("click", async function () {
+
+        if (!selectedFile) return;
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        predictButton.disabled = true;
+        statusText.textContent = "Analysing MRI image...";
+
+        resultBox.style.display = "none";
+
+        try {
+            const response = await fetch("/predict", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    typeof data.detail === "string"
+                        ? data.detail
+                        : "Unable to process the uploaded image."
+                );
+            }
+
+            document.getElementById("prediction").textContent =
+                data.prediction;
+
+            document.getElementById("confidence").textContent =
+                "Model confidence score: " +
+                (data.confidence * 100).toFixed(2) + "%";
+
+            resultBox.style.display = "block";
+            statusText.textContent = "Prediction completed successfully.";
+
+        } catch (error) {
+            statusText.textContent = "Error: " + error.message;
+        }
+
+        predictButton.disabled = false;
+    });
+</script>
+
+</body>
+</html>

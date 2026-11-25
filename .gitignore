@@ -1,0 +1,30 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+
+# Operating system
+.DS_Store
+
+# Temporary files
+*.log
+.ipynb_checkpoints/
+
+# Dataset - do not upload research data
+Alzheimers_dataset/
+Alzheimers dataset/
+*.zip
+# Research datasets
+**/Alzheimers dataset/
+**/Alzheimers_dataset/
+
+# Model checkpoints - review before uploading
+backend/models/*.pth
